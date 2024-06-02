@@ -1,6 +1,8 @@
 #include <stdio.h>
 
 typedef unsigned char BYTE;
+typedef unsigned int UINT;
+
 void IP(BYTE *in, BYTE *out);
 BYTE ip[] = {
     58, 50, 42, 34, 26, 18, 10, 2,
@@ -45,5 +47,22 @@ void IP(BYTE *in, BYTE *out)
 
         if (in[whereByte] & (mask >> whereBit))
             out[i / 8] |= mask >> (i % 8);
+    }
+}
+
+void BtoW(BYTE *in, UINT *l, UINT *r)
+{
+    int i;
+
+    for (i = 0; i < 8; i++)
+    {
+        if (i < 4)
+        {
+            *l |= (UINT)in[i] << (24 - (i * 8));
+        }
+        else
+        {
+            *r |= (UINT)in[i] << (56 - (i * 8)); // 오른쪽 32비트로 변환
+        }
     }
 }
