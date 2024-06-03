@@ -182,3 +182,20 @@ UINT Permutation(UINT in)
     }
     return out;
 }
+
+UINT f(UINT r, BYTE *rkey)
+{
+    BYTE data[6] = {
+        0,
+    };
+    UINT out;
+
+    EP(r, data);
+
+    for (int i = 0; i < 6; i++)
+    {
+        data[i] = data[i] ^ rkey[i];
+    }
+
+    out = Permutation(S_box_Transfer(data));
+}
