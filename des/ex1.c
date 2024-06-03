@@ -77,35 +77,18 @@ BYTE s_box[8][4][16] = {
         {7, 11, 4, 1, 9, 12, 14, 2, 0, 6, 10, 13, 15, 3, 5, 8},
         {2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11}}};
 
+BYTE P[32] = {
+    16, 7, 20, 21,
+    29, 12, 28, 17,
+    1, 15, 23, 26,
+    5, 18, 31, 10,
+    2, 8, 24, 14,
+    32, 27, 3, 9,
+    19, 13, 30, 6,
+    22, 11, 4, 25};
 int main()
 {
-    BYTE plainText[8] = "abcdefgh";
-    BYTE outText[8] = {0};
-    // 1. 초기 순열
-    IP(plainText, outText);
-    // 2. 비트 나누기
-    UINT *L;
-    UINT *R;
-    BtoW(outText, L, R);
-
-    // 3. 비트 확장
-    BYTE expandText[6] = {
-        0,
-    };
-    EP(R, expandText);
-
-    printf("평문 : ");
-    for (int i = 0; i < 8; i++)
-    {
-        printf("%02X ", plainText[i]);
-    }
-    printf("\n초기 전치 후 평문 : ");
-    for (int i = 0; i < 6; i++)
-    {
-        printf("%02X ", expandText[i]);
-    }
-    printf("\n");
-
+    printf("미완성");
     return 0;
 }
 
@@ -181,6 +164,20 @@ UINT S_box_Transfer(BYTE *in)
             // s-box로 찾아낸 값을 out에 계속 대입 32bit
             temp = 0;
             shift -= 4;
+        }
+    }
+    return out;
+}
+// s-box로 32bit만든 비트를 전치해주는 함수
+UINT Permutation(UINT in)
+{
+    UINT out = 0;
+    UINT mask = 0x80000000;
+    for (int i = 0; i < 32; i++)
+    {
+        if (in & (mask >> P[i] - 1))
+        {
+            out |= (mask >> i);
         }
     }
     return out;
