@@ -5,7 +5,13 @@ typedef unsigned int UINT;
 
 void IP(BYTE *in, BYTE *out);
 void BtoW(BYTE *in, UINT *l, UINT *r);
-void EP(UINT *r, BYTE *out);
+void EP(UINT r, BYTE *out);
+UINT S_box_Transfer(BYTE *in);
+UINT Permutation(UINT in);
+UINT f(UINT r, BYTE *rkey);
+void PC1(BYTE *in, BYTE *out);
+void makeBit28(UINT *c, UINT *d, BYTE *data);
+void PC2(UINT c, UINT d, BYTE *out);
 
 BYTE ip[64] = {
     58, 50, 42, 34, 26, 18, 10, 2,
@@ -97,6 +103,16 @@ BYTE PC_1[56] = {
     14, 6, 61, 53, 45, 37, 29,
     21, 13, 5, 28, 20, 12, 4};
 
+BYTE PC_2[48] = {
+    14, 17, 11, 24, 1, 5,
+    3, 28, 15, 6, 21, 10,
+    23, 19, 12, 4, 26, 8,
+    16, 7, 27, 20, 13, 2,
+    41, 52, 31, 37, 47, 55,
+    30, 40, 51, 45, 33, 48,
+    44, 49, 39, 56, 34, 53,
+    46, 42, 50, 36, 29, 32};
+
 int main()
 {
     printf("미완성");
@@ -134,14 +150,14 @@ void BtoW(BYTE *in, UINT *l, UINT *r)
     }
 }
 
-void EP(UINT *r, BYTE *out)
+void EP(UINT r, BYTE *out)
 {
     int i;
     UINT mask = 0x80000000;
 
     for (i = 0; i < 48; i++)
     {
-        if (*r & (mask >> (E[i] - 1)))
+        if (r & (mask >> (E[i] - 1)))
         {
             out[i / 8] |= (BYTE)(0x80 >> (i % 8));
         }
@@ -186,7 +202,7 @@ UINT Permutation(UINT in)
     UINT mask = 0x80000000;
     for (int i = 0; i < 32; i++)
     {
-        if (in & (mask >> P[i] - 1))
+        if (in & (mask >> (P[i] - 1)))
         {
             out |= (mask >> i);
         }
@@ -209,6 +225,8 @@ UINT f(UINT r, BYTE *rkey)
     }
 
     out = Permutation(S_box_Transfer(data));
+
+    return out;
 }
 // key 64bit -> 56bit
 void PC1(BYTE *in, BYTE *out)
@@ -267,4 +285,26 @@ UINT cir_shift(UINT n, int r)
         }
     }
     return n;
+}
+// 28bit key + 28bit = 56bit -> 48bit
+void PC2(UINT c, UINT d, BYTE *out)
+{
+    UINT mask = 0x08000000;
+    for (int i = 0; i < 48; i++)
+    {
+        if (PC_2[i] - 1 < 28)
+        {
+            if (c & (mask >> (PC_2[i] - 1)))
+            {
+                out[i / 8] |= (mask >> (i % 8));
+            }
+        }
+        else
+        {
+            if (d & (mask >> (PC_2[i] - 28 - 1)))
+            {
+                out[i / 8] |= (mask >> (i & 8));
+            }
+        }
+    }
 }
