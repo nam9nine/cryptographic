@@ -213,9 +213,6 @@ UINT f(UINT r, BYTE *rkey)
 
 void PC1(BYTE *in, BYTE *out)
 {
-
-    // 56bit -> 7byte
-
     int whereByte, whereBit;
     BYTE mask = 0x80;
 
@@ -228,6 +225,28 @@ void PC1(BYTE *in, BYTE *out)
         if (in[whereByte] & (mask >> whereBit))
         {
             out[i / 8] |= (mask >> (i % 8));
+        }
+    }
+}
+
+void makeBit28(UINT *c, UINT *d, BYTE *data)
+{
+    BYTE mask = 0x80;
+    for (int i = 0; i < 56; i++)
+    {
+        if (i < 28)
+        {
+            if (data[i / 8] & (mask % i))
+            {
+                *c |= 0x08000000 >> i;
+            }
+        }
+        else
+        {
+            if (data[i / 8] & (mask >> (i % 8)))
+            {
+                *d |= (0x08000000 >> (i - 28));
+            }
         }
     }
 }
