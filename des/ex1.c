@@ -210,7 +210,7 @@ UINT f(UINT r, BYTE *rkey)
 
     out = Permutation(S_box_Transfer(data));
 }
-
+// key 64bit -> 56bit
 void PC1(BYTE *in, BYTE *out)
 {
     int whereByte, whereBit;
@@ -249,4 +249,22 @@ void makeBit28(UINT *c, UINT *d, BYTE *data)
             }
         }
     }
+}
+
+UINT cir_shift(UINT n, int r)
+{
+    int shifts[16] = {1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 2, 1};
+
+    for (int i = 0; i < 16; i++)
+    {
+        if (shifts[i] == 1)
+        {
+            n = ((n << 1) + (n >> 27)) & 0x0FFFFFFF;
+        }
+        else
+        {
+            n = ((n << 2) + (n >> 26)) & 0x0FFFFFFF;
+        }
+    }
+    return n;
 }
