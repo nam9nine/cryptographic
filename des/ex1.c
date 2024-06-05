@@ -1,5 +1,7 @@
 #include <stdio.h>
-
+#include <string.h>
+#define BLOCK_SIZE 8
+#define DES_ROUND 16
 typedef unsigned char BYTE;
 typedef unsigned int UINT;
 
@@ -11,8 +13,16 @@ UINT Permutation(UINT in);
 UINT f(UINT r, BYTE *rkey);
 void PC1(BYTE *in, BYTE *out);
 void makeBit28(UINT *c, UINT *d, BYTE *data);
+void DES_Encrypyoin(BYTE *p_text, BYTE *result, BYTE *key);
 void PC2(UINT c, UINT d, BYTE *out);
+void WtoB(UINT l, UINT r, BYTE *out);
+void In_IP(BYTE *in, BYTE *out);
+void swap(UINT *x, UINT *y);
+UINT cir_shift(UINT n, int r);
+void key_expansion(BYTE *key, BYTE round_key[16][6]);
+void DES_Decryption(BYTE *c_text, BYTE *result, BYTE *key);
 
+void MainPrint();
 BYTE ip[64] = {
     58, 50, 42, 34, 26, 18, 10, 2,
     60, 52, 44, 36, 28, 20, 12, 4,
@@ -24,14 +34,12 @@ BYTE ip[64] = {
     63, 55, 47, 39, 31, 23, 15, 7};
 
 BYTE E[48] = {
-    32, 1, 2, 3, 4, 5,
-    4, 5, 6, 7, 8, 9,
-    8, 9, 10, 11, 12, 13,
-    12, 13, 14, 15, 16, 17,
-    16, 17, 18, 19, 20, 21,
-    20, 21, 22, 23, 24, 25,
-    24, 25, 26, 27, 28, 29,
-    28, 29, 30, 31, 32, 1};
+    32, 1, 2, 3, 4, 5, 4, 5,
+    6, 7, 8, 9, 8, 9, 10, 11,
+    12, 13, 12, 13, 14, 15, 16, 17,
+    16, 17, 18, 19, 20, 21, 20, 21,
+    22, 23, 24, 25, 24, 25, 26, 27,
+    28, 29, 28, 29, 30, 31, 32, 1};
 
 BYTE s_box[8][4][16] = {
     // S1
@@ -84,14 +92,10 @@ BYTE s_box[8][4][16] = {
         {2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11}}};
 
 BYTE P[32] = {
-    16, 7, 20, 21,
-    29, 12, 28, 17,
-    1, 15, 23, 26,
-    5, 18, 31, 10,
-    2, 8, 24, 14,
-    32, 27, 3, 9,
-    19, 13, 30, 6,
-    22, 11, 4, 25};
+    16, 7, 20, 21, 29, 12, 28, 17,
+    1, 15, 23, 26, 5, 18, 31, 10,
+    2, 8, 24, 14, 32, 27, 3, 9,
+    19, 13, 30, 6, 22, 11, 4, 25};
 
 BYTE PC_1[56] = {
     57, 49, 41, 33, 25, 17, 9,
@@ -113,16 +117,76 @@ BYTE PC_2[48] = {
     44, 49, 39, 56, 34, 53,
     46, 42, 50, 36, 29, 32};
 
+BYTE ip_1[64] = {
+    40, 8, 48, 16, 56, 24, 64, 32,
+    39, 7, 47, 15, 55, 23, 63, 31,
+    38, 6, 46, 14, 54, 22, 62, 30,
+    37, 5, 45, 13, 53, 21, 61, 29,
+    36, 4, 44, 12, 52, 20, 60, 28,
+    35, 3, 43, 11, 51, 19, 59, 27,
+    34, 2, 42, 10, 50, 18, 58, 26,
+    33, 1, 41, 9, 49, 17, 57, 25};
 int main()
 {
-    printf("미완성");
+    MainPrint();
     return 0;
+}
+
+void MainPrint()
+{
+    int i;
+    int msg_len = 0, block_count = 0;
+    BYTE p_text[128] = {
+        0,
+    };
+    BYTE c_text[128] = {
+        0,
+    };
+    BYTE d_text[128] = {
+        0,
+    };
+    BYTE key[9] = {
+        0,
+    };
+
+    printf("* 평문 입력 : ");
+    gets(p_text);
+
+    printf("* 비밀키 입력 : ");
+    scanf("%s", key);
+
+    msg_len = (int)strlen((char *)p_text);
+    block_count = (msg_len % BLOCK_SIZE) ? (msg_len / BLOCK_SIZE + 1) : (msg_len / BLOCK_SIZE);
+
+    for (i = 0; i < block_count; i++)
+    {
+        DES_Encrypyoin(&p_text[i * BLOCK_SIZE], &c_text[i * BLOCK_SIZE], key);
+    }
+    printf("\n* 암호문 : ");
+    for (i = 0; i < block_count * BLOCK_SIZE; i++)
+    {
+        printf("%x", c_text[i]);
+    }
+    printf("\n");
+
+    for (i = 0; i < block_count; i++)
+    {
+        DES_Decryption(&c_text[i * BLOCK_SIZE], &d_text[i * BLOCK_SIZE], key);
+    }
+
+    printf("\n* 복호문 : ");
+    for (i = 0; i < msg_len; i++)
+    {
+        printf("%c", d_text[i]);
+    }
+    printf("\n");
 }
 
 void IP(BYTE *in, BYTE *out)
 {
     int i;
     BYTE whereByte, whereBit, mask = 0x80;
+    memset(out, 0, 8);
     for (i = 0; i < 64; i++)
     {
         whereByte = (ip[i] - 1) / 8;
@@ -167,16 +231,17 @@ void EP(UINT r, BYTE *out)
 UINT S_box_Transfer(BYTE *in)
 {
     // temp변수에 48bit(8byte)를 6bit씩 넣는다
-    BYTE mask = 0x80;
+    // BYTE mask = 0x80;
+    UINT mask = 0x00000080;
     UINT temp, out = 0;
     int column, row, shift = 28;
 
     for (int i = 0; i < 48; i++)
     {
         // in배열 요소 하나의 크기가 byte로 되어 있으니 각 byte마다 bit를 모두 반복으로 돌린다.
-        if (in[i / 8] & (mask >> (i % 8)))
+        if (in[i / 8] & (BYTE)(mask >> (i % 8)))
         {
-            temp |= (0x20 >> (i % 6));
+            temp |= 0x20 >> (i % 6);
         }
         // 6bit로 추출한 temp를 가지고 s-box표로 값을 변환한다 6bit -> 4bit
         if ((i + 1) % 6 == 0)
@@ -186,11 +251,10 @@ UINT S_box_Transfer(BYTE *in)
             // column : row 비트를 제외한 나머지 4bit
             row = ((temp & 0x20) >> 4) + (temp & 0x01);
             column = (temp & 0x1E) >> 1;
-
-            out += (UINT)(s_box[i / 6][row][column]) << shift;
+            out += ((UINT)s_box[i / 6][row][column] << shift);
             // s-box로 찾아낸 값을 out에 계속 대입 32bit
-            temp = 0;
             shift -= 4;
+            temp = 0;
         }
     }
     return out;
@@ -232,7 +296,7 @@ UINT f(UINT r, BYTE *rkey)
 void PC1(BYTE *in, BYTE *out)
 {
     int whereByte, whereBit;
-    BYTE mask = 0x80;
+    UINT mask = 0x00000080;
 
     for (int i = 0; i < 56; i++)
     {
@@ -240,9 +304,9 @@ void PC1(BYTE *in, BYTE *out)
         whereByte = (PC_1[i] - 1) / 8;
         whereBit = (PC_1[i] - 1) % 8;
 
-        if (in[whereByte] & (mask >> whereBit))
+        if (in[whereByte] & (BYTE)(mask >> whereBit))
         {
-            out[i / 8] |= (mask >> (i % 8));
+            out[i / 8] |= (BYTE)(mask >> (i % 8));
         }
     }
 }
@@ -254,7 +318,7 @@ void makeBit28(UINT *c, UINT *d, BYTE *data)
     {
         if (i < 28)
         {
-            if (data[i / 8] & (mask % i))
+            if (data[i / 8] & (mask >> (i % 8)))
             {
                 *c |= 0x08000000 >> i;
             }
@@ -271,40 +335,147 @@ void makeBit28(UINT *c, UINT *d, BYTE *data)
 
 UINT cir_shift(UINT n, int r)
 {
-    int shifts[16] = {1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 2, 1};
+    int n_shift[16] = {1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1};
 
-    for (int i = 0; i < 16; i++)
+    if (n_shift[r] == 1)
     {
-        if (shifts[i] == 1)
-        {
-            n = ((n << 1) + (n >> 27)) & 0x0FFFFFFF;
-        }
-        else
-        {
-            n = ((n << 2) + (n >> 26)) & 0x0FFFFFFF;
-        }
+        n = ((n << 1) + (n >> 27)) & 0xFFFFFFFF;
+    }
+    else
+    {
+        n = ((n << 2) + (n >> 26)) & 0xFFFFFFFF;
     }
     return n;
 }
-// 28bit key + 28bit = 56bit -> 48bit
+
 void PC2(UINT c, UINT d, BYTE *out)
 {
-    UINT mask = 0x08000000;
+
+    UINT mask = 0x80000000;
+
     for (int i = 0; i < 48; i++)
     {
-        if (PC_2[i] - 1 < 28)
+        if ((PC_2[i] - 1) < 28)
         {
             if (c & (mask >> (PC_2[i] - 1)))
             {
-                out[i / 8] |= (mask >> (i % 8));
+                out[i / 8] |= (0x80 >> (i % 8));
             }
         }
         else
         {
-            if (d & (mask >> (PC_2[i] - 28 - 1)))
+            if (d & (mask >> (PC_2[i] - 1 - 28)))
             {
-                out[i / 8] |= (mask >> (i & 8));
+                out[i / 8] |= 0x08 >> (i % 8);
             }
         }
     }
+}
+
+void key_expansion(BYTE *key, BYTE round_key[16][6])
+{
+    BYTE pc1_result[7] = {0};
+    UINT c = 0, d = 0;
+
+    PC1(key, pc1_result);
+    makeBit28(&c, &d, pc1_result);
+
+    for (int i = 0; i < 16; i++)
+    {
+        c = cir_shift(c, i);
+        d = cir_shift(d, i);
+
+        PC2(c, d, round_key[i]);
+    }
+}
+
+void WtoB(UINT l, UINT r, BYTE *out)
+{
+    int i;
+    UINT mask = 0xFF000000;
+
+    for (int i = 0; i < 8; i++)
+    {
+        if (i < 4)
+        {
+            out[i] = (l & (mask >> i * 8)) >> (24 - (i * 8));
+        }
+        else
+        {
+            out[i] = (r & (mask >> (i - 4) * 8)) >> (56 - (i * 8));
+        }
+    }
+}
+
+void In_IP(BYTE *in, BYTE *out)
+{
+    int i;
+    BYTE whereByte, whereBit, mask = 0x80;
+    for (i = 0; i < 64; i++)
+    {
+        whereByte = (ip_1[i] - 1) / 8;
+        whereBit = (ip_1[i] - 1) % 8;
+
+        if (in[whereByte] & (mask >> whereBit))
+            out[i / 8] |= mask >> (i % 8);
+    }
+}
+
+void swap(UINT *x, UINT *y)
+{
+    UINT temp = *x;
+    *x = *y;
+    *y = temp;
+}
+
+void DES_Encrypyoin(BYTE *p_text, BYTE *result, BYTE *key)
+{
+    BYTE data[BLOCK_SIZE] = {0};
+    UINT l = 0, r = 0;
+    BYTE round_key[16][6] = {0};
+
+    key_expansion(key, round_key);
+    IP(p_text, data);
+
+    BtoW(data, &l, &r);
+
+    for (int i = 0; i < DES_ROUND; i++)
+    {
+        l = l ^ f(r, round_key[i]);
+
+        if (i != DES_ROUND - 1)
+            swap(&l, &r);
+    }
+    WtoB(l, r, data);
+    In_IP(data, result);
+}
+
+void DES_Decryption(BYTE *c_text, BYTE *result, BYTE *key)
+{
+    int i;
+    BYTE data[BLOCK_SIZE] = {
+        0,
+    };
+    BYTE round_key[16][6] = {
+        0,
+    };
+    UINT L = 0, R = 0;
+
+    key_expansion(key, round_key);
+    IP(c_text, data);
+
+    BtoW(data, &L, &R);
+
+    for (i = 0; i < DES_ROUND; i++)
+    {
+        L = L ^ f(R, round_key[DES_ROUND - i - 1]);
+
+        if (i != DES_ROUND - 1)
+        {
+            swap(&L, &R);
+        }
+    }
+
+    WtoB(L, R, data);
+    In_IP(data, result);
 }
